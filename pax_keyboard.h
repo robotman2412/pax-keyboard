@@ -123,6 +123,11 @@ typedef struct {
 	int            last_key_x, last_key_y;
 } pkb_ctx_t;
 
+// Initialise the context with default settings.
+void pkb_init   (pax_buf_t *buf, pkb_ctx_t *ctx);
+// Free any memory associated with the context.
+void pkb_destroy(pkb_ctx_t *ctx);
+
 // Redraw the complete on-screen keyboard.
 void pkb_render (pax_buf_t *buf, pkb_ctx_t *ctx);
 // Redraw only the changed parts of the on-screen keyboard.

@@ -27,6 +27,89 @@
 #include <string.h>
 #include <malloc.h>
 
+// Initialise the context with default settings.
+void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx) {
+	// Allocate a bufffer.
+	char *buffer = malloc(4);
+	memset(buffer, 0, 4);
+	
+	// Some defaults.
+	*ctx = (pkb_ctx_t) {
+		// Position on screen of the keyboard.
+		.x              = 0,
+		.y              = 0,
+		// Maximum size of the keyboard.
+		.width          = buf->width,
+		.height         = buf->height,
+		
+		// Content of the keyboard.
+		.content        = buffer,
+		// Size in bytes of capacity of the content buffer.
+		.content_cap    = 4,
+		
+		// Starting position of the selection in the text box.
+		.selection      = 0,
+		// Cursor position of the text box.
+		.cursor         = 0,
+		
+		// Cursor position of the keyboard.
+		.key_x          = 3,
+		.key_y          = 1,
+		// The currently held input.
+		.held           = PKB_NO_INPUT,
+		// The time that holding the input started.
+		.hold_start     = 0,
+		// The last time pkb_press was called.
+		.last_press     = 0,
+		
+		// Whether the keyboard is multi-line.
+		.multiline      = false,
+		// Whether the keyboard is in insert mode.
+		.insert         = false,
+		// The board that is currently selected.
+		.board_sel      = PKB_LOWERCASE,
+		
+		// The font to use for the keyboard.
+		.kb_font        = PAX_FONT_DEFAULT,
+		// The font size to use for the keyboard.
+		.kb_font_size   = 27,
+		// The font to use for the text.
+		.text_font      = PAX_FONT_DEFAULT,
+		// The font size to use for the text.
+		.text_font_size = 18,
+		// The text color to use.
+		.text_col       = 0xffffffff,
+		// The text color to use when a character is being held down.
+		.sel_text_col   = 0xff000000,
+		// The selection color to use.
+		.sel_col        = 0xff007fff,
+		// The background color to use.
+		.bg_col         = 0xff000000,
+		
+		// Whether something has changed since last draw.
+		.dirty          = true,
+		// Whether the text has changed since last draw.
+		.text_dirty     = true,
+		// Whether the keyboard has changed since last draw.
+		.kb_dirty       = true,
+		// Whether just the selected character has changed since last draw.
+		.sel_dirty      = true,
+		// Previous cursor position of the keyboard.
+		// Used for sel_dirty.
+		.last_key_x     = 3,
+		.last_key_y     = 1,
+	};
+	
+	// TODO: Pick fancier text sizes.
+}
+
+// Free any memory associated with the context.
+void pkb_destroy(pkb_ctx_t *ctx) {
+	free(ctx->content);
+	ctx->content = NULL;
+	ctx->content_cap = 0;
+}
+
 const char *uppercase_board[] = {
 	"QWERTYUIOP",
 	"ASDFGHJKL",
@@ -236,7 +319,7 @@ static void pkb_render_key(pax_buf_t *buf, pkb_ctx_t *ctx, int key_x, int key_y)
 		x += 1.0 * dx;
 		
 		// SPACE.
-		if (ctx->held == PKB_CHARSELECT) {
+		if (space_sel && ctx->held == PKB_CHARSELECT) {
 			pax_draw_rect(buf, ctx->sel_col, x-dx/2, y, dx*5, ctx->kb_font_size);
 			pax_draw_rect(buf, ctx->sel_text_col, x, y + ctx->kb_font_size/3, dx*4, ctx->kb_font_size/3);
 		} else {
