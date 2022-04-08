@@ -27,6 +27,8 @@
 #include <string.h>
 #include <malloc.h>
 
+/* ==== Miscellaneous ==== */
+
 // Initialise the context with default settings.
 void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx) {
 	// Allocate a bufffer.
@@ -98,6 +100,9 @@ void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx) {
 		// Used for sel_dirty.
 		.last_key_x     = 3,
 		.last_key_y     = 1,
+		
+		// Indicates that the input has been accepted.
+		.input_accepted = false,
 	};
 	
 	// TODO: Pick fancier text sizes.
@@ -143,6 +148,118 @@ const char **boards[] = {
 	number_board,    symbols_board,
 };
 
+/* ==== Special key art ==== */
+
+// Art for the accept key.
+// Expects x to be the horizontal center of the key.
+static void pkb_art_accept(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx, bool selected) {
+	pax_col_t col    = selected && ctx->held == PKB_CHARSELECT ? ctx->sel_text_col : ctx->text_col;
+	float     scale  = fminf(ctx->kb_font_size - 4, dx - 4);
+	
+	pax_push_2d  (buf);
+	pax_apply_2d (buf, matrix_2d_translate(x-dx/2+2, y+2));
+	pax_apply_2d (buf, matrix_2d_scale(scale, scale));
+	
+	pax_draw_line(buf, col, 0.25, 0.5, 0.5, 1);
+	pax_draw_line(buf, col, 0.5,  1,   1,   0);
+	
+	pax_pop_2d   (buf);
+}
+
+
+// Art for the backspace key.
+// Expects x to be the horizontal center of the key.
+static void pkb_art_bksp(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx, bool selected) {
+	pax_col_t col    = selected && ctx->held == PKB_CHARSELECT ? ctx->sel_text_col : ctx->text_col;
+	float     scale  = fminf(ctx->kb_font_size - 4, dx - 4);
+	
+	pax_push_2d  (buf);
+	pax_apply_2d (buf, matrix_2d_translate(x-dx/2+2, y+2));
+	pax_apply_2d (buf, matrix_2d_scale(scale, scale));
+	
+	// The stopper.
+	pax_draw_line(buf, col, 0,   0.25,  0,    0.75);
+	// The arrow.
+	pax_draw_line(buf, col, 0.1, 0.5,   0.35, 0.25);
+	pax_draw_line(buf, col, 0.1, 0.5,   0.35, 0.75);
+	pax_draw_line(buf, col, 0.1, 0.5,   1,    0.5);
+	
+	pax_pop_2d   (buf);
+}
+
+// Art for the shift key.
+// Expects x to be the horizontal center of the key.
+static void pkb_art_shift(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx, bool selected) {
+	bool      active = ctx->board_sel & 1;
+	pax_col_t col    = selected && ctx->held == PKB_CHARSELECT ? ctx->sel_text_col : ctx->text_col;
+	float     scale  = fminf(ctx->kb_font_size - 4, dx - 4);
+	
+	pax_push_2d (buf);
+	pax_apply_2d(buf, matrix_2d_translate(x, y+2));
+	pax_apply_2d(buf, matrix_2d_scale(scale, scale));
+	
+	if (active) {
+		// Filled in shift key.
+		pax_draw_tri (buf, col, -0.5, 0.5, 0, 0, 0.5, 0.5);
+		pax_draw_rect(buf, col, -0.25, 0.5, 0.5, 0.5);
+	} else {
+		// Outlined shift key.
+		pax_draw_line(buf, col,  0,    0,    0.5,  0.5);
+		pax_draw_line(buf, col,  0.5,  0.5,  0.25, 0.5);
+		pax_draw_line(buf, col,  0.25, 0.5,  0.25, 1);
+		pax_draw_line(buf, col,  0.25, 1,   -0.25, 1);
+		pax_draw_line(buf, col, -0.25, 0.5, -0.25, 1);
+		pax_draw_line(buf, col, -0.5,  0.5, -0.25, 0.5);
+		pax_draw_line(buf, col,  0,    0,   -0.5,  0.5);
+	}
+	
+	pax_pop_2d  (buf);
+}
+
+// Art for the letters/numbers key.
+// Expects x to be the horizontal center of the key.
+static void pkb_art_select(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx, bool selected) {
+	pax_col_t col    = selected && ctx->held == PKB_CHARSELECT ? ctx->sel_text_col : ctx->text_col;
+	
+	// Pick the stuff to show.
+	char *short_str;
+	char *long_str;
+	if (ctx->board_sel == PKB_NUMBERS) {
+		// Show some symbols.
+		short_str = "%";
+		long_str  = "%&~";
+	} else if (ctx->board_sel == PKB_SYMBOLS) {
+		// Show some letters.
+		short_str = "A";
+		long_str  = "Abc";
+	} else {
+		// Show some numbers.
+		short_str = "#";
+		long_str  = "123";
+	}
+	
+	// Calculate font size.
+	char      *str       = long_str;
+	pax_vec1_t dims      = pax_text_size(ctx->kb_font, 0, str);
+	int        font_size = 9;//(dx - 4) / dims.x * dims.y;
+	if (font_size < dims.y) {
+		str       = short_str;
+		dims      = pax_text_size(ctx->kb_font, 0, str);
+		font_size = 9;//(dx - 4) / dims.x * dims.y;
+	}
+	dims = pax_text_size(ctx->kb_font, font_size, str);
+	
+	// Now draw it.
+	pax_push_2d  (buf);
+	pax_apply_2d (buf, matrix_2d_translate(x-dims.x/2, y+(ctx->kb_font_size-font_size)/2));
+	pax_draw_text(buf, col, ctx->kb_font, font_size, 0, 0, str);
+	pax_pop_2d   (buf);
+}
+
+/* ==== Rendering ==== */
+
+// Draw one key of the keyboard.
+// Expects x to be the horizontal center of the key.
 static void pkb_char(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx, char *text, bool selected) {
 	pax_vec1_t dims = pax_text_size(ctx->kb_font, ctx->kb_font_size, text);
 	
@@ -166,8 +283,10 @@ static void pkb_char(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx,
 	}
 }
 
-static void pkb_row(pax_buf_t *buf, pkb_ctx_t *ctx, char *row, int selected, float dx, float y) {
+// Draw one full row of the keyboard.
+static void pkb_row(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, int selected, float dx, float y) {
 	// Calculate some stuff.
+	char  *row    = boards[ctx->board_sel][rownum];
 	size_t len    = strlen(row);
 	int    x      = (buf->width - len * dx + dx) / 2;
 	char   tmp[2] = {0,0};
@@ -177,12 +296,23 @@ static void pkb_row(pax_buf_t *buf, pkb_ctx_t *ctx, char *row, int selected, flo
 		// Draw a KEY.
 		*tmp = row[i];
 		pkb_char(buf, ctx, x, y, dx, tmp, selected == i);
+		
+		if (i == 0 && rownum == 2) {
+			// Draw shift key art.
+			pkb_art_shift(buf, ctx, x, y, dx, selected == i);
+		} else if (rownum == 2 && i == len - 1) {
+			// Draw the backspace key art.
+			pkb_art_bksp(buf, ctx, x, y, dx, selected == i);
+		}
+		
 		x += dx;
 	}
 }
 
-static void pkb_row_key(pax_buf_t *buf, pkb_ctx_t *ctx, char *row, bool selected, float dx, float y, int keyno) {
+// Draw a specific key in a row of the keyboard.
+static void pkb_row_key(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, bool selected, float dx, float y, int keyno) {
 	// Calculate some stuff.
+	char  *row    = boards[ctx->board_sel][rownum];
 	size_t len    = strlen(row);
 	int    x      = (buf->width - len * dx + dx) / 2 + dx * keyno;
 	char   tmp[2] = {0,0};
@@ -191,9 +321,17 @@ static void pkb_row_key(pax_buf_t *buf, pkb_ctx_t *ctx, char *row, bool selected
 	*tmp = row[keyno];
 	pax_draw_rect(buf, ctx->bg_col, x-dx/2, y, dx, ctx->kb_font_size);
 	pkb_char(buf, ctx, x, y, dx, tmp, selected);
+	
+	if (rownum == 2 && keyno == 0) {
+		// Draw the shift key art.
+		pkb_art_shift(buf, ctx, x, y, dx, selected);
+	} else if (rownum == 2 && keyno == len - 1) {
+		// Draw the backspace key art.
+		pkb_art_bksp(buf, ctx, x, y, dx, selected);
+	}
 }
 
-// Draw just the text part.
+// Draw just the board part.
 static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	// Draw background.
 	if (do_bg) {
@@ -211,14 +349,18 @@ static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 		if (i == ctx->key_y) {
 			sel = ctx->key_x;
 		}
-		pkb_row(buf, ctx, board[i], sel, dx, y);
+		pkb_row(buf, ctx, i, sel, dx, y);
 		y += ctx->kb_font_size;
 	}
 	
 	// Spacebar row time.
 	bool space_sel = ctx->key_y == 3 && ctx->key_x > 1 && ctx->key_x < 7;
-	float x = (buf->width - 6 * dx) / 2;
+	float x = (buf->width - 8 * dx) / 2;
 	
+	// The thingy selector.
+	pkb_char(buf, ctx, x, y, dx, " ", ctx->key_y == 3 && ctx->key_x == 0);
+	pkb_art_select(buf, ctx, x, y, dx, ctx->key_y == 3 && ctx->key_x == 0);
+	x += 1.0 * dx;
 	// Left char.
 	pkb_char(buf, ctx, x, y, dx, board[4], ctx->key_y == 3 && ctx->key_x == 1);
 	x += 1.0 * dx;
@@ -244,10 +386,13 @@ static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	// Right char.
 	x += 5.0 * dx;
 	pkb_char(buf, ctx, x, y, dx, board[5], ctx->key_y == 3 && ctx->key_x == 7);
-	
+	x += 1.0 * dx;
+	// The thingy acceptor.
+	pkb_char(buf, ctx, x, y, dx, " ", ctx->key_y == 3 && ctx->key_x == 8);
+	pkb_art_accept(buf, ctx, x, y, dx, ctx->key_y == 3 && ctx->key_x == 8);
 }
 
-// Draw just the board part.
+// Draw just the text part.
 static void pkb_render_text(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	// Draw background.
 	if (do_bg) {
@@ -291,6 +436,7 @@ static void pkb_render_text(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 // Draw one specific key.
 static void pkb_render_key(pax_buf_t *buf, pkb_ctx_t *ctx, int key_x, int key_y) {
 	if (key_y == -1) {
+		// If key_y is -1, the text box is selected to render.
 		pkb_render_text(buf, ctx, true);
 		return;
 	}
@@ -303,15 +449,21 @@ static void pkb_render_key(pax_buf_t *buf, pkb_ctx_t *ctx, int key_x, int key_y)
 	if (key_y < 3) {
 		// Draw one of the first three rows.
 		y += ctx->kb_font_size * key_y;
-		pkb_row_key(buf, ctx, board[key_y], key_y == ctx->key_y && key_x == ctx->key_x, dx, y, key_x);
+		pkb_row_key(buf, ctx, key_y, key_y == ctx->key_y && key_x == ctx->key_x, dx, y, key_x);
 		y += ctx->kb_font_size;
 	} else {
 		// Spacebar row time.
 		y += ctx->kb_font_size * 3;
 		bool space_sel = ctx->key_y == 3 && ctx->key_x > 1 && ctx->key_x < 7;
-		float x = (buf->width - 6 * dx) / 2;
+		float x = (buf->width - 8 * dx) / 2;
 		
-		// Left char.
+		// The thingy selector.
+		if (key_x == 0) {
+			pax_draw_rect(buf, ctx->bg_col, x-dx/2, y, dx, ctx->kb_font_size);
+			pkb_char(buf, ctx, x, y, dx, " ", ctx->key_y == 3 && ctx->key_x == 0);
+			pkb_art_select(buf, ctx, x, y, dx, ctx->key_y == 3 && ctx->key_x == 0);
+		}
+		x += 1.0 * dx;
 		if (key_x == 1) {
 			pax_draw_rect(buf, ctx->bg_col, x-dx/2, y, dx, ctx->kb_font_size);
 			pkb_char(buf, ctx, x, y, dx, board[4], ctx->key_y == 3 && ctx->key_x == 1);
@@ -342,6 +494,13 @@ static void pkb_render_key(pax_buf_t *buf, pkb_ctx_t *ctx, int key_x, int key_y)
 		if (key_x == 7) {
 			pax_draw_rect(buf, ctx->bg_col, x-dx/2, y, dx, ctx->kb_font_size);
 			pkb_char(buf, ctx, x, y, dx, board[5], ctx->key_y == 3 && ctx->key_x == 7);
+		}
+		x += 1.0 * dx;
+		// The thingy acceptor.
+		if (key_x == 8) {
+			pax_draw_rect(buf, ctx->bg_col, x-dx/2, y, dx, ctx->kb_font_size);
+			pkb_char(buf, ctx, x, y, dx, " ", ctx->key_y == 3 && ctx->key_x == 8);
+			pkb_art_accept(buf, ctx, x, y, dx, ctx->key_y == 3 && ctx->key_x == 8);
 		}
 	}
 }
@@ -385,20 +544,9 @@ void pkb_redraw(pax_buf_t *buf, pkb_ctx_t *ctx) {
 	ctx->last_key_y = ctx->key_y;
 }
 
-// The loop that allows input repeating.
-void pkb_loop(pkb_ctx_t *ctx) {
-	int64_t now = esp_timer_get_time();
-	if (!ctx->held) return;
-	bool is_dir = (ctx->held >= PKB_UP) && (ctx->held <= PKB_RIGHT);
-	
-	if ((ctx->hold_start + 1000000 < now) || (is_dir && ctx->hold_start + 250000 < now)) {
-		// 8 repeats per second.
-		if (ctx->last_press + 125000 < now) {
-			pkb_press(ctx, ctx->held);
-		}
-	}
-}
+/* ==== Text editing ==== */
 
+// Handling of delete or backspace.
 static void pkb_delete(pkb_ctx_t *ctx, bool is_backspace) {
 	size_t oldlen = strlen(ctx->content);
 	if (!is_backspace && ctx->cursor == oldlen) {
@@ -427,6 +575,7 @@ static void pkb_delete(pkb_ctx_t *ctx, bool is_backspace) {
 	ctx->text_dirty = true;
 }
 
+// Handling of normal input.
 static void pkb_append(pkb_ctx_t *ctx, char value) {
 	size_t oldlen = strlen(ctx->content);
 	if (oldlen + 2 >= ctx->content_cap) {
@@ -445,6 +594,22 @@ static void pkb_append(pkb_ctx_t *ctx, char value) {
 	ctx->content[ctx->cursor] = value;
 	ctx->cursor ++;
 	ctx->text_dirty = true;
+}
+
+/* ==== Input handling ==== */
+
+// The loop that allows input repeating.
+void pkb_loop(pkb_ctx_t *ctx) {
+	int64_t now = esp_timer_get_time();
+	if (!ctx->held) return;
+	bool is_dir = (ctx->held >= PKB_UP) && (ctx->held <= PKB_RIGHT);
+	
+	if ((ctx->hold_start + 1000000 < now) || (is_dir && ctx->hold_start + 250000 < now)) {
+		// 8 repeats per second.
+		if (ctx->last_press + 125000 < now) {
+			pkb_press(ctx, ctx->held);
+		}
+	}
 }
 
 // A pressing of the input.
@@ -502,7 +667,11 @@ void pkb_press(pkb_ctx_t *ctx, pkb_input_t input) {
 			if (ctx->key_y == 3) {
 				switch (ctx->key_x) {
 					case 0:
-						// Something?
+						// Board selector.
+						if (ctx->board_sel == PKB_NUMBERS) ctx->board_sel = PKB_SYMBOLS;
+						else if (ctx->board_sel == PKB_SYMBOLS) ctx->board_sel = PKB_LOWERCASE;
+						else ctx->board_sel = PKB_NUMBERS;
+						ctx->kb_dirty = true;
 						break;
 					case 1:
 						// Magic.
@@ -518,11 +687,15 @@ void pkb_press(pkb_ctx_t *ctx, pkb_input_t input) {
 						break;
 					case 8:
 						// Enter idk.
+						ctx->input_accepted = true;
 						break;
 				}
 			} else if (ctx->key_y == 2) {
 				if (ctx->key_x == 0) {
-					// Something?
+					// cAPS LOCK KEY.
+					if (ctx->held == PKB_CHARSELECT) ctx->held = PKB_NO_INPUT;
+					ctx->board_sel ^= 1;
+					ctx->kb_dirty   = true;
 				} else if (ctx->key_x == strlen(board[2])-1) {
 					// Backspace.
 					pkb_delete(ctx, true);

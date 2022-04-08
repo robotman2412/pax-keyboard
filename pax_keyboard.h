@@ -121,6 +121,9 @@ typedef struct {
 	// Previous cursor position of the keyboard.
 	// Used for sel_dirty.
 	int            last_key_x, last_key_y;
+	
+	// Indicates that the input has been accepted.
+	bool           input_accepted;
 } pkb_ctx_t;
 
 // Initialise the context with default settings.
