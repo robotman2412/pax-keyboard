@@ -288,7 +288,7 @@ static void pkb_row(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, int selected, fl
 	// Calculate some stuff.
 	char  *row    = boards[ctx->board_sel][rownum];
 	size_t len    = strlen(row);
-	int    x      = (buf->width - len * dx + dx) / 2;
+	int    x      = ctx->x + (ctx->width - len * dx + dx) / 2;
 	char   tmp[2] = {0,0};
 	
 	// Show all of them.
@@ -314,7 +314,7 @@ static void pkb_row_key(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, bool selecte
 	// Calculate some stuff.
 	char  *row    = boards[ctx->board_sel][rownum];
 	size_t len    = strlen(row);
-	int    x      = (buf->width - len * dx + dx) / 2 + dx * keyno;
+	int    x      = ctx->x + (ctx->width - len * dx + dx) / 2 + dx * keyno;
 	char   tmp[2] = {0,0};
 	
 	// Show one of them.
@@ -335,7 +335,7 @@ static void pkb_row_key(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, bool selecte
 static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	// Draw background.
 	if (do_bg) {
-		pax_draw_rect(buf, ctx->bg_col, 0, ctx->height-ctx->kb_font_size*4, ctx->width, ctx->kb_font_size*4);
+		pax_draw_rect(buf, ctx->bg_col, ctx->x, ctx->y + ctx->height - ctx->kb_font_size*4, ctx->width, ctx->kb_font_size*4);
 	}
 	
 	// Select the board to display.
@@ -355,7 +355,7 @@ static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	
 	// Spacebar row time.
 	bool space_sel = ctx->key_y == 3 && ctx->key_x > 1 && ctx->key_x < 7;
-	float x = (buf->width - 8 * dx) / 2;
+	float x = ctx->x + (ctx->width - 8 * dx) / 2;
 	
 	// The thingy selector.
 	pkb_char(buf, ctx, x, y, dx, " ", ctx->key_y == 3 && ctx->key_x == 0);
@@ -396,7 +396,7 @@ static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 static void pkb_render_text(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	// Draw background.
 	if (do_bg) {
-		pax_draw_rect(buf, ctx->bg_col, 0, 0, ctx->width, ctx->height - ctx->kb_font_size*4);
+		pax_draw_rect(buf, ctx->bg_col, ctx->x, ctx->y, ctx->width, ctx->height - ctx->kb_font_size*4);
 	}
 	if (ctx->key_y == -1) {
 		// Outline us.
@@ -404,8 +404,8 @@ static void pkb_render_text(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	}
 	
 	// Some setup.
-	float x = 2;
-	float y = 2;
+	float x = ctx->x + 2;
+	float y = ctx->y + 2;
 	char tmp[2] = {0, 0};
 	
 	// Draw everything.
@@ -455,7 +455,7 @@ static void pkb_render_key(pax_buf_t *buf, pkb_ctx_t *ctx, int key_x, int key_y)
 		// Spacebar row time.
 		y += ctx->kb_font_size * 3;
 		bool space_sel = ctx->key_y == 3 && ctx->key_x > 1 && ctx->key_x < 7;
-		float x = (buf->width - 8 * dx) / 2;
+		float x = ctx->x + (ctx->width - 8 * dx) / 2;
 		
 		// The thingy selector.
 		if (key_x == 0) {
@@ -507,7 +507,20 @@ static void pkb_render_key(pax_buf_t *buf, pkb_ctx_t *ctx, int key_x, int key_y)
 
 // Redraw the complete on-screen keyboard.
 void pkb_render(pax_buf_t *buf, pkb_ctx_t *ctx) {
-	pax_background(buf, ctx->bg_col);
+	if (matrix_2d_is_identity(buf->stack_2d.value)
+		&& ctx->x == 0 && ctx->y == 0
+		&& ctx->width  == buf->width
+		&& ctx->height == buf->height) {
+		// We can just fill the entire screen.
+		pax_background(buf, ctx->bg_col);
+	} else {
+		// We'll need to fill a rectangle.
+		pax_draw_rect(
+			buf, ctx->bg_col,
+			ctx->x, ctx->y,
+			ctx->width, ctx->height
+		);
+	}
 	
 	// Draw the board.
 	pkb_render_keyb(buf, ctx, false);
