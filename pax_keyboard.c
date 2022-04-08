@@ -400,7 +400,7 @@ static void pkb_render_text(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	}
 	if (ctx->key_y == -1) {
 		// Outline us.
-		pax_outline_rect(buf, ctx->sel_col, 0, 0, ctx->width, ctx->height - ctx->kb_font_size*4);
+		pax_outline_rect(buf, ctx->sel_col, ctx->x, ctx->y, ctx->width, ctx->height - ctx->kb_font_size*4);
 	}
 	
 	// Some setup.
