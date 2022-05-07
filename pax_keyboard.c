@@ -32,8 +32,9 @@
 // Initialise the context with default settings.
 void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx) {
 	// Allocate a bufffer.
-	char *buffer = malloc(4);
-	memset(buffer, 0, 4);
+	stze_t buffer_cap = 4;
+	char *buffer = malloc(buffer_cap);
+	memset(buffer, 0, buffer_cap);
 	
 	// Some defaults.
 	*ctx = (pkb_ctx_t) {
@@ -47,7 +48,7 @@ void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx) {
 		// Content of the keyboard.
 		.content        = buffer,
 		// Size in bytes of capacity of the content buffer.
-		.content_cap    = 4,
+		.content_cap    = buffer_cap,
 		
 		// Starting position of the selection in the text box.
 		.selection      = 0,
@@ -582,7 +583,7 @@ static void pkb_delete(pkb_ctx_t *ctx, bool is_backspace) {
 	// DECREMENT length.
 	if (oldlen * 2 < ctx->content_cap) {
 		// Not decrementing here is important as oldlen excludes the null terminator.
-		ctx->content_cap = oldlen;
+		ctx->content_cap = oldlen + 2;
 		ctx->content = realloc(ctx->content, ctx->content_cap);
 	}
 	ctx->text_dirty = true;
