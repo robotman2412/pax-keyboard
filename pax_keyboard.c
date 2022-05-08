@@ -397,11 +397,11 @@ static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 static void pkb_render_text(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	// Draw background.
 	if (do_bg) {
-		pax_draw_rect(buf, ctx->bg_col, ctx->x, ctx->y, ctx->width, ctx->height - ctx->kb_font_size*4);
+		pax_draw_rect(buf, ctx->bg_col, ctx->x-0.01, ctx->y-0.01, ctx->width+0.02, ctx->height - ctx->kb_font_size*4 + 0.02);
 	}
 	if (ctx->key_y == -1) {
 		// Outline us.
-		pax_outline_rect(buf, ctx->sel_col, ctx->x, ctx->y, ctx->width, ctx->height - ctx->kb_font_size*4);
+		pax_outline_rect(buf, ctx->sel_col, ctx->x, ctx->y, ctx->width - 1, ctx->height - ctx->kb_font_size*4 - 1);
 	}
 	
 	// Some setup.
@@ -422,7 +422,7 @@ static void pkb_render_text(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 		
 		if (x + dims.x > ctx->width - 2) {
 			// Word wrap.
-			x  = 2;
+			x  = ctx->x + 2;
 			y += ctx->text_font_size;
 		}
 		pax_draw_text(buf, ctx->text_col, ctx->text_font, ctx->text_font_size, x, y, tmp);
