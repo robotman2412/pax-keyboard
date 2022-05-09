@@ -32,7 +32,7 @@
 // Initialise the context with default settings.
 void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx) {
 	// Allocate a bufffer.
-	stze_t buffer_cap = 4;
+	size_t buffer_cap = 4;
 	char *buffer = malloc(buffer_cap);
 	memset(buffer, 0, buffer_cap);
 	
