@@ -116,6 +116,18 @@ void pkb_destroy(pkb_ctx_t *ctx) {
 	ctx->content_cap = 0;
 }
 
+
+// Replaces the text in the keyboard with the given text.
+// Makes a copy of the given text.
+void pkb_set_content(pkb_ctx_t *ctx, const char *content) {
+	// Replace the content.
+	free(ctx->content);
+	ctx->content_cap = strlen(content) + 1;
+	ctx->content = strdup(content);
+	// Move the cursor to the end.
+	ctx->cursor = strlen(content);
+}
+
 const char *uppercase_board[] = {
 	"QWERTYUIOP",
 	"ASDFGHJKL",
@@ -320,7 +332,7 @@ static void pkb_row_key(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, bool selecte
 	
 	// Show one of them.
 	*tmp = row[keyno];
-	pax_draw_rect(buf, ctx->bg_col, x-dx/2, y, dx, ctx->kb_font_size);
+	pax_draw_rect(buf, ctx->bg_col, x-dx/2-1, y, dx+2, ctx->kb_font_size);
 	pkb_char(buf, ctx, x, y, dx, tmp, selected);
 	
 	if (rownum == 2 && keyno == 0) {
@@ -717,7 +729,7 @@ void pkb_press(pkb_ctx_t *ctx, pkb_input_t input) {
 					// nORMAL CHAR.
 					pkb_append(ctx, board[2][ctx->key_x]);
 				}
-			} else {
+			} else if (ctx->key_y != -1) {
 				// Normal char.
 				pkb_append(ctx, board[ctx->key_y][ctx->key_x]);
 			}

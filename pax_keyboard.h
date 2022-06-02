@@ -130,6 +130,9 @@ typedef struct {
 void pkb_init   (pax_buf_t *buf, pkb_ctx_t *ctx);
 // Free any memory associated with the context.
 void pkb_destroy(pkb_ctx_t *ctx);
+// Replaces the text in the keyboard with the given text.
+// Makes a copy of the given text.
+void pkb_set_content(pkb_ctx_t *ctx, const char *content);
 
 // Redraw the complete on-screen keyboard.
 void pkb_render (pax_buf_t *buf, pkb_ctx_t *ctx);
