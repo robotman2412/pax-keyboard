@@ -30,9 +30,8 @@
 /* ==== Miscellaneous ==== */
 
 // Initialise the context with default settings.
-void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx) {
+void pkb_init(pax_buf_t *buf, pkb_ctx_t *ctx, size_t buffer_cap) {
 	// Allocate a bufffer.
-	size_t buffer_cap = 4;
 	char *buffer = malloc(buffer_cap);
 	memset(buffer, 0, buffer_cap);
 	
@@ -121,10 +120,8 @@ void pkb_destroy(pkb_ctx_t *ctx) {
 // Makes a copy of the given text.
 void pkb_set_content(pkb_ctx_t *ctx, const char *content) {
 	// Replace the content.
-	free(ctx->content);
-	ctx->content_cap = strlen(content) + 1;
-	ctx->content = strdup(content);
-	// Move the cursor to the end.
+	strncpy(ctx->content, content, ctx->content_cap - 1);
+	ctx->content[ctx->content_cap-1] = 0;
 	ctx->cursor = strlen(content);
 }
 
@@ -592,12 +589,6 @@ static void pkb_delete(pkb_ctx_t *ctx, bool is_backspace) {
 		ctx->content[i] = ctx->content[i+1];
 	}
 	
-	// DECREMENT length.
-	if (oldlen * 2 < ctx->content_cap) {
-		// Not decrementing here is important as oldlen excludes the null terminator.
-		ctx->content_cap = oldlen + 2;
-		ctx->content = realloc(ctx->content, ctx->content_cap);
-	}
 	ctx->text_dirty = true;
 }
 
@@ -605,9 +596,8 @@ static void pkb_delete(pkb_ctx_t *ctx, bool is_backspace) {
 static void pkb_append(pkb_ctx_t *ctx, char value) {
 	size_t oldlen = strlen(ctx->content);
 	if (oldlen + 2 >= ctx->content_cap) {
-		// Expand the buffer just a bit.
-		ctx->content_cap *= 2;
-		ctx->content = realloc(ctx->content, ctx->content_cap);
+		// That's too big.
+		return;
 	}
 	
 	// Copy over the remainder of the buffer.

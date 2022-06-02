@@ -127,7 +127,7 @@ typedef struct {
 } pkb_ctx_t;
 
 // Initialise the context with default settings.
-void pkb_init   (pax_buf_t *buf, pkb_ctx_t *ctx);
+void pkb_init   (pax_buf_t *buf, pkb_ctx_t *ctx, size_t buffer_cap);
 // Free any memory associated with the context.
 void pkb_destroy(pkb_ctx_t *ctx);
 // Replaces the text in the keyboard with the given text.
