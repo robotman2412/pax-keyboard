@@ -94,11 +94,11 @@ typedef struct {
 	pkb_keyboard_t board_sel;
 	
 	// The font to use for the keyboard.
-	pax_font_t    *kb_font;
+	const pax_font_t *kb_font;
 	// The font size to use for the keyboard.
 	float          kb_font_size;
 	// The font to use for the text.
-	pax_font_t    *text_font;
+	const pax_font_t *text_font;
 	// The font size to use for the text.
 	float          text_font_size;
 	// The text color to use.

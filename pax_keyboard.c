@@ -270,7 +270,7 @@ static void pkb_art_select(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, flo
 
 // Draw one key of the keyboard.
 // Expects x to be the horizontal center of the key.
-static void pkb_char(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx, char *text, bool selected) {
+static void pkb_char(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx, const char *text, bool selected) {
 	pax_vec1_t dims = pax_text_size(ctx->kb_font, ctx->kb_font_size, text);
 	
 	if (selected && ctx->held == PKB_CHARSELECT) {
@@ -296,10 +296,10 @@ static void pkb_char(pax_buf_t *buf, pkb_ctx_t *ctx, float x, float y, float dx,
 // Draw one full row of the keyboard.
 static void pkb_row(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, int selected, float dx, float y) {
 	// Calculate some stuff.
-	char  *row    = boards[ctx->board_sel][rownum];
-	size_t len    = strlen(row);
-	int    x      = ctx->x + (ctx->width - len * dx + dx) / 2;
-	char   tmp[2] = {0,0};
+	const char *row    = boards[ctx->board_sel][rownum];
+	size_t      len    = strlen(row);
+	int         x      = ctx->x + (ctx->width - len * dx + dx) / 2;
+	char        tmp[2] = {0,0};
 	
 	// Show all of them.
 	for (int i = 0; i < len; i++) {
@@ -322,10 +322,10 @@ static void pkb_row(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, int selected, fl
 // Draw a specific key in a row of the keyboard.
 static void pkb_row_key(pax_buf_t *buf, pkb_ctx_t *ctx, int rownum, bool selected, float dx, float y, int keyno) {
 	// Calculate some stuff.
-	char  *row    = boards[ctx->board_sel][rownum];
-	size_t len    = strlen(row);
-	int    x      = ctx->x + (ctx->width - len * dx + dx) / 2 + dx * keyno;
-	char   tmp[2] = {0,0};
+	const char *row    = boards[ctx->board_sel][rownum];
+	size_t      len    = strlen(row);
+	int         x      = ctx->x + (ctx->width - len * dx + dx) / 2 + dx * keyno;
+	char        tmp[2] = {0,0};
 	
 	// Show one of them.
 	*tmp = row[keyno];
@@ -349,9 +349,9 @@ static void pkb_render_keyb(pax_buf_t *buf, pkb_ctx_t *ctx, bool do_bg) {
 	}
 	
 	// Select the board to display.
-	char **board = boards[ctx->board_sel];
-	float  dx    = ctx->width / 10;
-	float  y     = ctx->y + ctx->height - ctx->kb_font_size * 4;
+	const char **board = boards[ctx->board_sel];
+	float        dx    = ctx->width / 10;
+	float        y     = ctx->y + ctx->height - ctx->kb_font_size * 4;
 	
 	// Draw the first three rows.
 	for (int i = 0; i < 3; i ++) {
@@ -452,9 +452,9 @@ static void pkb_render_key(pax_buf_t *buf, pkb_ctx_t *ctx, int key_x, int key_y)
 	}
 	
 	// Select the board to display.
-	char **board = boards[ctx->board_sel];
-	float  dx    = ctx->width / 10;
-	float  y     = ctx->y + ctx->height - ctx->kb_font_size * 4;
+	const char **board = boards[ctx->board_sel];
+	float        dx    = ctx->width / 10;
+	float        y     = ctx->y + ctx->height - ctx->kb_font_size * 4;
 	
 	if (key_y < 3) {
 		// Draw one of the first three rows.
@@ -630,7 +630,7 @@ void pkb_loop(pkb_ctx_t *ctx) {
 
 // A pressing of the input.
 void pkb_press(pkb_ctx_t *ctx, pkb_input_t input) {
-	char **board = boards[ctx->board_sel];
+	const char **board = boards[ctx->board_sel];
 	ctx->last_press = esp_timer_get_time();
 	switch (input) {
 			// Cursor movements.
